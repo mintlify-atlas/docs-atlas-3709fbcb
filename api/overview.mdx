@@ -1,0 +1,159 @@
+---
+title: 'API Overview'
+description: 'Complete REST API reference for Astro Services backend'
+---
+
+## Base URL
+
+The API runs on port 5000 by default:
+
+```
+http://localhost:5000/api
+```
+
+All API endpoints are prefixed with `/api`.
+
+## Available Endpoints
+
+The Astro Services API provides the following endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/services` | Retrieve all services |
+| `GET` | `/services/:id` | Retrieve a single service by ID |
+| `POST` | `/services` | Create a new service |
+| `PUT` | `/services/:id` | Update an existing service |
+| `DELETE` | `/services/:id` | Delete a service |
+| `GET` | `/health` | Health check endpoint |
+
+## Authentication
+
+The current API does not require authentication. All endpoints are publicly accessible.
+
+## Request Format
+
+All POST and PUT requests must include a `Content-Type: application/json` header and send data in JSON format.
+
+```bash
+curl -X POST http://localhost:5000/api/services \
+  -H "Content-Type: application/json" \
+  -d '{"titulo": "Service Name", ...}'
+```
+
+## Response Format
+
+All API responses are returned in JSON format with appropriate HTTP status codes.
+
+### Success Responses
+
+<Accordion title="200 OK - Successful GET request">
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://example.com/image.jpg",
+  "titulo": "Premium IPTV",
+  "precio": 29.99,
+  "descuento": 15,
+  "descripcion": "Access to 1000+ channels worldwide",
+  "createdAt": "2026-03-10T10:30:00.000Z",
+  "updatedAt": "2026-03-10T10:30:00.000Z"
+}
+```
+</Accordion>
+
+<Accordion title="201 Created - Successful POST request">
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://example.com/image.jpg",
+  "titulo": "Premium IPTV",
+  "precio": 29.99,
+  "descuento": 15,
+  "descripcion": "Access to 1000+ channels worldwide",
+  "createdAt": "2026-03-10T10:30:00.000Z",
+  "updatedAt": "2026-03-10T10:30:00.000Z"
+}
+```
+</Accordion>
+
+### Error Responses
+
+The API returns structured error messages for failed requests:
+
+<Accordion title="400 Bad Request - Validation error">
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: titulo: El título del servicio es obligatorio"
+}
+```
+</Accordion>
+
+<Accordion title="404 Not Found - Resource not found">
+```json
+{
+  "message": "Servicio no encontrado"
+}
+```
+</Accordion>
+
+<Accordion title="500 Internal Server Error - Server error">
+```json
+{
+  "message": "Error al obtener los servicios",
+  "error": "Connection to database failed"
+}
+```
+</Accordion>
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+- **200** - OK: Request succeeded
+- **201** - Created: Resource created successfully
+- **400** - Bad Request: Invalid input or validation error
+- **404** - Not Found: Resource not found
+- **500** - Internal Server Error: Server-side error
+
+All error responses include:
+- `message`: Human-readable error description (in Spanish)
+- `error`: Technical error details
+
+## Health Check
+
+Use the health endpoint to verify the API server is running:
+
+```bash
+curl http://localhost:5000/api/health
+```
+
+<Accordion title="Response">
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-03-13T15:45:30.123Z"
+}
+```
+</Accordion>
+
+## CORS Configuration
+
+The API supports Cross-Origin Resource Sharing (CORS) with the following configuration:
+
+- **Origin**: Configurable via `FRONTEND_URL` environment variable (defaults to `*`)
+- **Credentials**: Enabled
+
+## Rate Limiting
+
+The API does not currently implement rate limiting. All endpoints can be called without restrictions.
+
+## Sorting and Pagination
+
+### Sorting
+
+The `GET /api/services` endpoint returns services sorted by creation date in descending order (newest first).
+
+### Pagination
+
+Pagination is not currently implemented. All services are returned in a single response.

@@ -1,0 +1,327 @@
+---
+title: Configuration
+description: Environment variables and configuration options for Astro Services backend and frontend
+---
+
+Astro Services uses environment variables to configure both the backend API and frontend application. This guide covers all configuration options available in the system.
+
+## Backend Configuration
+
+The backend is a Node.js Express application that requires configuration for the server port, database connection, and CORS settings.
+
+### Environment Variables
+
+Create a `.env` file in the `astro_backend` directory with the following variables:
+
+<CodeGroup>
+```bash .env (Development)
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/astro_services
+FRONTEND_URL=http://localhost:5173
+```
+
+```bash .env (Docker)
+PORT=5000
+MONGODB_URI=mongodb://mongo:27017/astro_services
+FRONTEND_URL=http://localhost
+```
+
+```bash .env (Production)
+PORT=5000
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/astro_services
+FRONTEND_URL=https://your-domain.com
+```
+</CodeGroup>
+
+### Configuration Reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `5000` | The port on which the backend server listens |
+| `MONGODB_URI` | Yes | - | MongoDB connection string (local or Atlas) |
+| `FRONTEND_URL` | No | `*` | Allowed origin for CORS requests |
+
+### PORT
+
+The HTTP port for the Express server. Used in `astro_backend/src/server.js:5`:
+
+```javascript src/server.js
+const PORT = process.env.PORT || 5000;
+```
+
+<Note>
+When running in Docker, ensure the `PORT` environment variable matches the exposed port in the Dockerfile and docker-compose.yml.
+</Note>
+
+### MONGODB_URI
+
+The MongoDB connection string. This variable is required for database connectivity.
+
+**Format for Local MongoDB:**
+```
+mongodb://localhost:27017/astro_services
+```
+
+**Format for Docker Compose:**
+```
+mongodb://mongo:27017/astro_services
+```
+
+**Format for MongoDB Atlas:**
+```
+mongodb+srv://username:password@cluster-name.mongodb.net/astro_services
+```
+
+The connection is established in `astro_backend/src/config/db.js:9`:
+
+```javascript config/db.js
+const conn = await mongoose.connect(process.env.MONGODB_URI);
+```
+
+<Warning>
+The MongoDB URI may contain credentials. Never commit `.env` files to version control. Use `.gitignore` to exclude them.
+</Warning>
+
+### FRONTEND_URL
+
+Specifies the allowed origin for Cross-Origin Resource Sharing (CORS). This prevents unauthorized domains from accessing your API.
+
+Configured in `astro_backend/src/app.js:8-11`:
+
+```javascript app.js
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+}));
+```
+
+**Development:** Use the Vite dev server URL
+```
+FRONTEND_URL=http://localhost:5173
+```
+
+**Production:** Use your production domain
+```
+FRONTEND_URL=https://astro-services.com
+```
+
+**Docker:** Use the host or service name
+```
+FRONTEND_URL=http://localhost
+```
+
+<Tip>
+For development with multiple frontends, you can pass an array or use `*` to allow all origins. In production, always specify exact origins for security.
+</Tip>
+
+## MongoDB Connection Details
+
+The backend uses Mongoose for MongoDB connectivity with custom DNS configuration.
+
+### DNS Configuration
+
+To support MongoDB Atlas SRV records, the application forces Google DNS servers:
+
+```javascript config/db.js
+import dns from 'node:dns';
+
+// Force Google DNS for Atlas SRV record resolution
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+```
+
+This is configured in:
+- `astro_backend/src/config/db.js:5`
+- `astro_backend/src/seed.js:6`
+
+<Note>
+This DNS override ensures consistent MongoDB Atlas connectivity across different network environments.
+</Note>
+
+## Frontend Configuration
+
+The frontend is a React application built with Vite. It needs to know the backend API URL.
+
+### API Endpoint Configuration
+
+The frontend must be configured to communicate with the backend API. The API base URL should be set according to your deployment environment:
+
+**Development (Vite dev server):**
+```
+http://localhost:5000/api
+```
+
+**Docker Compose:**
+```
+http://localhost:5000/api
+```
+
+**Production:**
+```
+https://api.your-domain.com/api
+```
+
+<Warning>
+If your frontend runs on a different domain than the backend, ensure CORS is properly configured in the backend with the correct `FRONTEND_URL`.
+</Warning>
+
+## Docker Environment Variables
+
+When using Docker Compose, environment variables are defined directly in `docker-compose.yml`:
+
+```yaml docker-compose.yml
+services:
+  backend:
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/astro_services
+```
+
+### Using .env with Docker Compose
+
+For better security and flexibility, create a `.env` file in the project root:
+
+```bash .env
+BACKEND_PORT=5000
+MONGODB_URI=mongodb://mongo:27017/astro_services
+FRONTEND_URL=http://localhost
+```
+
+Then reference these in docker-compose.yml:
+
+```yaml docker-compose.yml
+services:
+  backend:
+    environment:
+      - PORT=${BACKEND_PORT}
+      - MONGODB_URI=${MONGODB_URI}
+      - FRONTEND_URL=${FRONTEND_URL}
+```
+
+## Configuration Best Practices
+
+<Steps>
+  <Step title="Use Environment-Specific Files">
+    Maintain separate `.env` files for different environments:
+    - `.env.development`
+    - `.env.production`
+    - `.env.test`
+    
+    Never commit these files to version control.
+  </Step>
+
+  <Step title="Provide Example Configuration">
+    Create a `.env.example` file with dummy values:
+    
+    ```bash .env.example
+    PORT=5000
+    MONGODB_URI=mongodb://localhost:27017/astro_services
+    FRONTEND_URL=http://localhost:5173
+    ```
+    
+    Commit this file to help other developers set up their environment.
+  </Step>
+
+  <Step title="Validate Required Variables">
+    Add validation in your application startup to ensure required variables are set:
+    
+    ```javascript
+    if (!process.env.MONGODB_URI) {
+      console.error('MONGODB_URI environment variable is required');
+      process.exit(1);
+    }
+    ```
+  </Step>
+
+  <Step title="Use Secrets Management in Production">
+    For production deployments, use secure secrets management:
+    - Docker Secrets
+    - Kubernetes Secrets
+    - AWS Secrets Manager
+    - HashiCorp Vault
+  </Step>
+</Steps>
+
+## Loading Environment Variables
+
+The backend loads environment variables using the `dotenv` package, configured at the entry point:
+
+```javascript server.js
+import 'dotenv/config';
+```
+
+This must be imported before any other modules that depend on environment variables.
+
+<Tip>
+The `dotenv/config` import automatically loads variables from the `.env` file in the project root. No additional configuration is needed.
+</Tip>
+
+## Health Check Endpoint
+
+The backend provides a health check endpoint to verify the service is running:
+
+```javascript app.js
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+```
+
+**Usage:**
+```bash
+curl http://localhost:5000/api/health
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-03-13T10:30:00.000Z"
+}
+```
+
+This endpoint is useful for:
+- Docker health checks
+- Load balancer health probes
+- Monitoring systems
+- Deployment validation
+
+## Troubleshooting Configuration Issues
+
+### Backend Won't Start
+
+1. **Check environment variables are loaded:**
+   ```javascript
+   console.log('Port:', process.env.PORT);
+   console.log('MongoDB URI:', process.env.MONGODB_URI);
+   ```
+
+2. **Verify .env file location:**
+   The `.env` file must be in the `astro_backend` directory.
+
+3. **Check for syntax errors:**
+   Ensure no spaces around `=` in .env files:
+   ```bash
+   # Correct
+   PORT=5000
+   
+   # Incorrect
+   PORT = 5000
+   ```
+
+### CORS Errors
+
+If you see CORS errors in the browser console:
+
+1. Verify `FRONTEND_URL` matches your frontend's actual URL
+2. Include the protocol (`http://` or `https://`)
+3. Don't include trailing slashes
+4. Check the browser's network tab for the `Origin` header
+
+### MongoDB Connection Fails
+
+See the [Database Setup](/deployment/database) guide for detailed troubleshooting of MongoDB connection issues.
+
+## Next Steps
+
+- Set up your MongoDB database in [Database Setup](/deployment/database)
+- Deploy with Docker in [Docker Deployment](/deployment/docker)
+- Explore API endpoints in [API Reference](/api/services)

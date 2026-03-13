@@ -1,0 +1,455 @@
+---
+title: Styling with Tailwind
+description: Tailwind CSS setup, patterns, and design system for Astro Services
+icon: 'palette'
+---
+
+Astro Services uses Tailwind CSS v4 for styling, providing a modern, utility-first approach to design with a dark theme optimized for streaming services.
+
+## Tailwind CSS 4 Setup
+
+The project uses Tailwind CSS v4 with the new Vite plugin architecture.
+
+### Installation
+
+```json package.json
+{
+  "dependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "tailwindcss": "^4.2.1"
+  }
+}
+```
+
+### Vite Configuration
+
+Tailwind is integrated directly into Vite:
+
+```js vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+
+### CSS Import
+
+The main stylesheet imports Tailwind directives:
+
+```css src/index.css
+@import "tailwindcss";
+```
+
+<Note>
+  Tailwind CSS v4 uses a simpler import syntax compared to v3. No need for separate `@tailwind` directives.
+</Note>
+
+## Design System
+
+### Color Palette
+
+The application uses a carefully selected dark theme color palette:
+
+<Tabs>
+  <Tab title="Background">
+    ```css
+    bg-gray-950  /* Primary background */
+    bg-gray-900  /* Card backgrounds */
+    bg-gray-800  /* Borders */
+    ```
+    
+    Used for creating depth and hierarchy in the dark theme.
+  </Tab>
+  
+  <Tab title="Primary (Indigo)">
+    ```css
+    text-indigo-400  /* Branding, prices */
+    bg-indigo-500    /* Hover states */
+    bg-indigo-600    /* Primary buttons */
+    border-indigo-500 /* Focus states */
+    ```
+    
+    Indigo is the primary brand color, used for CTAs and important elements.
+  </Tab>
+  
+  <Tab title="Accent (Emerald)">
+    ```css
+    bg-emerald-500   /* Discount badges */
+    ```
+    
+    Emerald green indicates positive actions like discounts.
+  </Tab>
+  
+  <Tab title="Text">
+    ```css
+    text-white       /* Headings, primary text */
+    text-gray-400    /* Body text, descriptions */
+    text-gray-500    /* Muted text, metadata */
+    ```
+    
+    Text colors provide clear hierarchy and readability.
+  </Tab>
+</Tabs>
+
+### Typography
+
+Consistent typography scales are used throughout:
+
+```jsx
+{/* Page Heading */}
+<h2 className="text-4xl font-extrabold tracking-tight">
+  Streaming, IPTV y más al mejor precio
+</h2>
+
+{/* Section Heading */}
+<h1 className="text-xl font-bold tracking-tight text-white">
+  Astro <span className="text-indigo-400">Streaming</span>
+</h1>
+
+{/* Card Title */}
+<h3 className="text-lg font-bold text-white">{titulo}</h3>
+
+{/* Body Text */}
+<p className="text-sm leading-relaxed text-gray-400">{descripcion}</p>
+
+{/* Price */}
+<span className="text-2xl font-extrabold text-indigo-400">S/.{precio}</span>
+```
+
+## Component Styling Patterns
+
+### Header Component
+
+The header demonstrates responsive design and state-based styling:
+
+```jsx components/Header.jsx
+<header className="border-b border-gray-800 bg-gray-950">
+  <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+    {/* Logo */}
+    <h1 className="text-xl font-bold tracking-tight text-white">
+      Astro <span className="text-indigo-400">Streaming</span>
+    </h1>
+
+    {/* Search Input */}
+    <input
+      type="text"
+      className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 pr-10 text-sm text-white placeholder-gray-500 transition-colors focus:border-indigo-500 focus:outline-none"
+    />
+
+    {/* Navigation Links */}
+    <a
+      href="#"
+      className="transition-colors hover:text-white"
+    >
+      Servicios
+    </a>
+  </div>
+</header>
+```
+
+#### Key Patterns:
+
+- **Container**: `mx-auto max-w-7xl` centers content with max width
+- **Flexbox**: `flex items-center justify-between` for layout
+- **Spacing**: Consistent `px-6 py-4` padding
+- **Transitions**: `transition-colors` for smooth hover effects
+
+### ServiceCard Component
+
+The service card showcases advanced styling with hover effects:
+
+```jsx components/ServiceCard.jsx
+<div className="group relative flex flex-col overflow-hidden rounded-2xl bg-gray-900 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-1">
+  {/* Image with hover scale */}
+  <div className="relative h-48 overflow-hidden">
+    <img
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+      src={imagen}
+      alt={titulo}
+    />
+    
+    {/* Discount Badge */}
+    {descuento > 0 && (
+      <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-md">
+        -{descuento}%
+      </span>
+    )}
+  </div>
+
+  {/* Content */}
+  <div className="flex flex-1 flex-col gap-3 p-5">
+    <h3 className="text-lg font-bold text-white">{titulo}</h3>
+    <p className="flex-1 text-sm leading-relaxed text-gray-400">{descripcion}</p>
+
+    {/* Price Display */}
+    <div className="flex items-end gap-2 pt-2">
+      <span className="text-2xl font-extrabold text-indigo-400">S/.{precioFinal}</span>
+      {descuento > 0 && (
+        <span className="mb-0.5 text-sm text-gray-500 line-through">S/.{precio.toFixed(2)}</span>
+      )}
+    </div>
+
+    {/* CTA Button */}
+    <button className="mt-2 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-indigo-500 active:bg-indigo-700">
+      Contratar
+    </button>
+  </div>
+</div>
+```
+
+#### Advanced Techniques:
+
+1. **Group Hover**: `group` class enables child elements to respond to parent hover
+   ```jsx
+   <div className="group">
+     <img className="group-hover:scale-110" />
+   </div>
+   ```
+
+2. **Multiple Transforms**: Combining shadow, scale, and translate
+   ```css
+   hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-1
+   ```
+
+3. **Opacity Colors**: Using `/20` for 20% opacity
+   ```css
+   bg-red-950/50  /* 50% opacity red-950 */
+   shadow-indigo-500/20  /* 20% opacity shadow */
+   ```
+
+4. **Conditional Classes**: Rendering styles based on data
+   ```jsx
+   {descuento > 0 && <span className="...">-{descuento}%</span>}
+   ```
+
+### ServiceGrid Component
+
+Responsive grid layout with Tailwind:
+
+```jsx components/ServiceGrid.jsx
+<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+  {services.map((service) => (
+    <ServiceCard key={service._id} service={service} />
+  ))}
+</div>
+```
+
+#### Responsive Breakpoints:
+
+- **Mobile (default)**: `grid-cols-1` - Single column
+- **Tablet (sm:)**: `sm:grid-cols-2` - Two columns at 640px+
+- **Desktop (lg:)**: `lg:grid-cols-3` - Three columns at 1024px+
+
+## Responsive Design
+
+### Mobile-First Approach
+
+Tailwind encourages mobile-first design. Styles apply to mobile by default, then scale up:
+
+```jsx
+{/* Hidden on mobile, visible on desktop */}
+<div className="hidden md:block">
+  Desktop Navigation
+</div>
+
+{/* Visible on mobile, hidden on desktop */}
+<div className="md:hidden">
+  Mobile Menu
+</div>
+
+{/* Responsive padding */}
+<main className="px-6 py-12">
+  {/* Content */}
+</main>
+```
+
+### Hamburger Menu Animation
+
+The mobile menu uses transition utilities:
+
+```jsx
+<button onClick={() => setMenuOpen(!menuOpen)}>
+  <span className={`block h-0.5 w-6 bg-gray-400 transition-all duration-300 ${
+    menuOpen ? 'translate-y-2 rotate-45' : ''
+  }`} />
+  <span className={`block h-0.5 w-6 bg-gray-400 transition-all duration-300 ${
+    menuOpen ? 'opacity-0' : ''
+  }`} />
+  <span className={`block h-0.5 w-6 bg-gray-400 transition-all duration-300 ${
+    menuOpen ? '-translate-y-2 -rotate-45' : ''
+  }`} />
+</button>
+
+{/* Expandable menu */}
+<div className={`overflow-hidden transition-all duration-300 ${
+  menuOpen ? 'max-h-40' : 'max-h-0'
+}`}>
+  {/* Menu content */}
+</div>
+```
+
+## Loading and Error States
+
+### Loading Spinner
+
+```jsx
+<div className="flex justify-center py-20">
+  <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+</div>
+```
+
+The spinner uses:
+- `animate-spin` for rotation
+- `border-t-transparent` for the spinning effect
+- `border-indigo-500` for brand consistency
+
+### Error Display
+
+```jsx
+<div className="rounded-xl border border-red-800 bg-red-950/50 p-6 text-center text-red-400">
+  <p className="font-semibold">Error al cargar los servicios</p>
+  <p className="mt-1 text-sm">{error}</p>
+</div>
+```
+
+## Utility Patterns
+
+### Spacing Scale
+
+Consistent spacing throughout the app:
+
+```jsx
+gap-2    /* 0.5rem - 8px */
+gap-3    /* 0.75rem - 12px */
+gap-4    /* 1rem - 16px */
+gap-6    /* 1.5rem - 24px */
+
+px-3     /* Horizontal padding */
+py-2     /* Vertical padding */
+p-5      /* All sides padding */
+
+mt-2     /* Top margin */
+mb-3     /* Bottom margin */
+```
+
+### Border Radius
+
+```jsx
+rounded-lg      /* 0.5rem - Cards, inputs */
+rounded-xl      /* 0.75rem - Buttons */
+rounded-2xl     /* 1rem - Service cards */
+rounded-full    /* 9999px - Badges, circles */
+```
+
+### Transitions
+
+```jsx
+transition-colors      /* Color transitions */
+transition-all         /* All properties */
+transition-transform   /* Transform only */
+
+duration-200    /* 200ms */
+duration-300    /* 300ms */
+duration-500    /* 500ms */
+```
+
+## Best Practices
+
+<Accordion title="Use Semantic Class Names">
+  Group related utilities logically:
+  
+  ```jsx
+  {/* Layout */}
+  <div className="flex flex-col gap-4">
+    {/* Appearance */}
+    <div className="rounded-lg border border-gray-700 bg-gray-900">
+      {/* Typography */}
+      <p className="text-sm font-medium text-gray-400">
+        Content
+      </p>
+    </div>
+  </div>
+  ```
+</Accordion>
+
+<Accordion title="Extract Repeated Patterns">
+  For frequently used combinations, consider extracting to components:
+  
+  ```jsx
+  // Instead of repeating this pattern:
+  <button className="rounded-xl bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">
+  
+  // Create a Button component:
+  <Button variant="primary">Click me</Button>
+  ```
+</Accordion>
+
+<Accordion title="Use Opacity Modifiers">
+  Tailwind v4 supports inline opacity:
+  
+  ```jsx
+  bg-gray-900/50     /* 50% opacity */
+  shadow-indigo-500/20  /* 20% opacity shadow */
+  ```
+</Accordion>
+
+<Accordion title="Leverage Group Hover">
+  Create interactive card effects:
+  
+  ```jsx
+  <div className="group">
+    <img className="group-hover:scale-110" />
+    <div className="group-hover:text-white" />
+  </div>
+  ```
+</Accordion>
+
+## Performance Considerations
+
+### JIT Compilation
+
+Tailwind CSS v4 uses Just-in-Time (JIT) compilation by default:
+
+- Only generates CSS for classes you actually use
+- Smaller production bundle sizes
+- Faster build times
+
+### CSS Purging
+
+In production builds, unused CSS is automatically removed. Ensure dynamic classes are safelisted if needed:
+
+```js
+// If you need dynamic classes:
+const bgColor = `bg-${color}-500`; // ❌ Won't be detected
+
+// Use complete class names:
+const bgColor = color === 'blue' ? 'bg-blue-500' : 'bg-gray-500'; // ✅
+```
+
+## Customization
+
+Extend Tailwind's default theme by creating a `tailwind.config.js` (if needed):
+
+```js
+export default {
+  theme: {
+    extend: {
+      colors: {
+        'astro-blue': '#4f46e5',
+      },
+      fontFamily: {
+        'sans': ['Inter', 'sans-serif'],
+      },
+    },
+  },
+}
+```
+
+## Related Resources
+
+- [Frontend Components](/development/components) - See Tailwind in component examples
+- [Tailwind CSS v4 Documentation](https://tailwindcss.com/docs)
+- [Tailwind Cheat Sheet](https://nerdcave.com/tailwind-cheat-sheet)

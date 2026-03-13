@@ -1,0 +1,322 @@
+---
+title: Docker Deployment
+description: Deploy Astro Services using Docker Compose with MongoDB, backend, and frontend containers
+---
+
+This guide walks you through deploying the complete Astro Services application stack using Docker Compose. The setup includes MongoDB, the Node.js backend API, and the React frontend.
+
+## Architecture Overview
+
+The Docker Compose configuration orchestrates three services:
+
+- **MongoDB**: Database service running MongoDB 7
+- **Backend**: Node.js Express API server (port 5000)
+- **Frontend**: React application served via Nginx (port 80)
+
+## Prerequisites
+
+<Note>
+Ensure you have Docker and Docker Compose installed on your system:
+- Docker 20.10 or higher
+- Docker Compose v2.0 or higher
+</Note>
+
+## Docker Compose Configuration
+
+The application uses the following `docker-compose.yml` structure:
+
+```yaml docker-compose.yml
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: astro_mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: ./astro_backend
+    container_name: astro_backend
+    ports:
+      - '5000:5000'
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/astro_services
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./astro_services
+    container_name: astro_frontend
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+```
+
+## Service Details
+
+<Accordion title="MongoDB Service">
+  - **Image**: Official MongoDB 7 image from Docker Hub
+  - **Container Name**: `astro_mongo`
+  - **Port**: 27017 (mapped to host)
+  - **Volume**: Persistent data storage in `mongo_data` volume
+  - **Purpose**: Primary database for storing service listings and application data
+</Accordion>
+
+<Accordion title="Backend Service">
+  - **Build Context**: `./astro_backend` directory
+  - **Container Name**: `astro_backend`
+  - **Port**: 5000 (mapped to host)
+  - **Environment Variables**:
+    - `PORT=5000`: Server listening port
+    - `MONGODB_URI=mongodb://mongo:27017/astro_services`: Database connection
+  - **Dependencies**: Waits for MongoDB to start
+  - **Base Image**: Node.js 20 Alpine (from Dockerfile)
+</Accordion>
+
+<Accordion title="Frontend Service">
+  - **Build Context**: `./astro_services` directory
+  - **Container Name**: `astro_frontend`
+  - **Port**: 80 (mapped to host)
+  - **Dependencies**: Waits for backend to start
+  - **Build Process**: Multi-stage build with Vite + Nginx
+  - **Purpose**: Serves the React application as static files
+</Accordion>
+
+## Deployment Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Astro Services repository and navigate to the project root:
+    
+    ```bash
+    git clone <repository-url>
+    cd astro_services
+    ```
+  </Step>
+
+  <Step title="Build the Images">
+    Build all Docker images defined in the compose file:
+    
+    ```bash
+    docker compose build
+    ```
+    
+    This process:
+    - Pulls the MongoDB 7 image
+    - Builds the backend Node.js image
+    - Builds the frontend with Vite and creates an Nginx image
+  </Step>
+
+  <Step title="Start the Services">
+    Launch all containers in detached mode:
+    
+    ```bash
+    docker compose up -d
+    ```
+    
+    The services will start in dependency order: MongoDB → Backend → Frontend
+  </Step>
+
+  <Step title="Verify the Deployment">
+    Check that all containers are running:
+    
+    ```bash
+    docker compose ps
+    ```
+    
+    You should see three containers with "Up" status.
+  </Step>
+
+  <Step title="Seed the Database">
+    Populate the database with initial service data:
+    
+    ```bash
+    docker compose exec backend npm run seed
+    ```
+    
+    This inserts sample services (Netflix, Disney+, HBO Max, etc.) into MongoDB.
+  </Step>
+
+  <Step title="Access the Application">
+    Open your browser and navigate to:
+    
+    - **Frontend**: http://localhost
+    - **Backend API**: http://localhost:5000/api/health
+    - **MongoDB**: mongodb://localhost:27017
+  </Step>
+</Steps>
+
+## Dockerfile Details
+
+<CodeGroup>
+```dockerfile astro_backend/Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["node", "src/server.js"]
+```
+
+```dockerfile astro_services/Dockerfile
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+</CodeGroup>
+
+<Note>
+The backend uses a single-stage build with production dependencies, while the frontend uses a multi-stage build to minimize the final image size.
+</Note>
+
+## Common Commands
+
+### Start Services
+```bash
+# Start all services
+docker compose up -d
+
+# Start and rebuild specific service
+docker compose up -d --build backend
+```
+
+### Stop Services
+```bash
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (deletes data)
+docker compose down -v
+```
+
+### View Logs
+```bash
+# View all logs
+docker compose logs
+
+# Follow logs for specific service
+docker compose logs -f backend
+
+# View last 100 lines
+docker compose logs --tail=100
+```
+
+### Execute Commands
+```bash
+# Run seed script
+docker compose exec backend npm run seed
+
+# Access MongoDB shell
+docker compose exec mongo mongosh astro_services
+
+# Access backend container shell
+docker compose exec backend sh
+```
+
+## Troubleshooting
+
+<Warning>
+If services fail to start, check the logs with `docker compose logs` to identify the issue.
+</Warning>
+
+### Backend Can't Connect to MongoDB
+
+If the backend shows connection errors:
+
+1. Verify MongoDB is running: `docker compose ps mongo`
+2. Check MongoDB logs: `docker compose logs mongo`
+3. Ensure the `MONGODB_URI` uses the service name `mongo` (not `localhost`)
+4. Wait a few seconds after starting for MongoDB to be ready
+
+### Port Already in Use
+
+If you see port binding errors:
+
+```bash
+# Check which process is using the port
+lsof -i :5000  # or :80, :27017
+
+# Modify docker-compose.yml to use different ports
+ports:
+  - '5001:5000'  # Maps host 5001 to container 5000
+```
+
+### Frontend Can't Reach Backend
+
+If the frontend shows API errors:
+
+1. Verify the backend health endpoint: `curl http://localhost:5000/api/health`
+2. Check CORS configuration in `astro_backend/src/app.js`
+3. Ensure the frontend is configured with the correct API URL
+
+### Permission Denied for MongoDB Volume
+
+```bash
+# Remove the volume and recreate
+docker compose down -v
+docker compose up -d
+```
+
+## Production Considerations
+
+<Tip>
+For production deployments, consider these enhancements:
+</Tip>
+
+- **Environment Variables**: Use `.env` file instead of hardcoding in docker-compose.yml
+- **Secrets Management**: Store sensitive data in Docker secrets or a vault service
+- **Resource Limits**: Add memory and CPU limits to prevent resource exhaustion
+- **Health Checks**: Define health check commands for automatic container recovery
+- **Nginx Configuration**: Customize Nginx config for caching and compression
+- **HTTPS**: Add SSL/TLS certificates and configure reverse proxy
+- **Monitoring**: Integrate logging and monitoring solutions (Prometheus, Grafana)
+- **Backups**: Implement automated MongoDB backup strategy
+
+### Example Production Enhancement
+
+```yaml docker-compose.prod.yml
+services:
+  backend:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+```
+
+## Next Steps
+
+- Configure environment variables in [Configuration](/deployment/configuration)
+- Learn about database management in [Database Setup](/deployment/database)
+- Explore the API endpoints in [API Reference](/api/services)

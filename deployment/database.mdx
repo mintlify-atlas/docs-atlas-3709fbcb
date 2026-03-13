@@ -1,0 +1,497 @@
+---
+title: Database Setup
+description: MongoDB setup, connection configuration, and data seeding for Astro Services
+---
+
+Astro Services uses MongoDB as its primary database for storing service listings. This guide covers MongoDB installation, connection setup, data seeding, and troubleshooting.
+
+## Database Overview
+
+The application connects to MongoDB using Mongoose ODM and stores data in the `astro_services` database.
+
+**Database Name:** `astro_services`
+
+**Collections:**
+- `services` - Stores streaming service listings with pricing and details
+
+## MongoDB Installation Options
+
+You can use MongoDB in several ways:
+
+<Accordion title="Option 1: Docker (Recommended)">
+  The easiest way to run MongoDB is with Docker Compose (already configured):
+  
+  ```bash
+  docker compose up -d mongo
+  ```
+  
+  This starts MongoDB 7 with persistent storage.
+</Accordion>
+
+<Accordion title="Option 2: Local Installation">
+  Install MongoDB locally on your machine:
+  
+  **macOS:**
+  ```bash
+  brew tap mongodb/brew
+  brew install mongodb-community@7.0
+  brew services start mongodb-community
+  ```
+  
+  **Ubuntu/Debian:**
+  ```bash
+  wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+  sudo apt-get update
+  sudo apt-get install -y mongodb-org
+  sudo systemctl start mongod
+  ```
+  
+  **Windows:**
+  Download and install from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
+</Accordion>
+
+<Accordion title="Option 3: MongoDB Atlas (Cloud)">
+  Use MongoDB's managed cloud service:
+  
+  1. Create a free account at [mongodb.com/atlas](https://www.mongodb.com/cloud/atlas)
+  2. Create a new cluster (free tier available)
+  3. Add a database user
+  4. Whitelist your IP address (or use 0.0.0.0/0 for development)
+  5. Get your connection string from the "Connect" button
+  
+  Your connection string will look like:
+  ```
+  mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/astro_services
+  ```
+</Accordion>
+
+## Database Connection
+
+The database connection is handled in `astro_backend/src/config/db.js`:
+
+```javascript config/db.js
+import dns from 'node:dns';
+import mongoose from 'mongoose';
+
+// Force Google DNS for Atlas SRV record resolution
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`MongoDB conectado: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Error de conexión a MongoDB: ${error.message}`);
+    process.exit(1);
+  }
+};
+
+export default connectDB;
+```
+
+### Connection String Format
+
+The `MONGODB_URI` environment variable determines which MongoDB instance to connect to:
+
+<CodeGroup>
+```bash Local MongoDB
+MONGODB_URI=mongodb://localhost:27017/astro_services
+```
+
+```bash Docker Compose
+MONGODB_URI=mongodb://mongo:27017/astro_services
+```
+
+```bash MongoDB Atlas
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/astro_services
+```
+
+```bash MongoDB with Authentication
+MONGODB_URI=mongodb://user:password@localhost:27017/astro_services?authSource=admin
+```
+</CodeGroup>
+
+<Note>
+When using Docker Compose, use the service name `mongo` instead of `localhost` as the hostname. Docker's internal DNS resolves service names to container IP addresses.
+</Note>
+
+## DNS Configuration for MongoDB Atlas
+
+The application configures custom DNS servers to ensure reliable MongoDB Atlas connectivity:
+
+```javascript
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+```
+
+This forces the use of Google's DNS servers for resolving MongoDB Atlas SRV records (`mongodb+srv://` URLs).
+
+<Tip>
+This DNS configuration is particularly important in environments with restrictive network policies or unreliable DNS resolution.
+</Tip>
+
+## Data Seeding
+
+The application includes a seed script to populate the database with sample service data.
+
+### Seed Script
+
+The seed script is located at `astro_backend/src/seed.js` and contains sample streaming services:
+
+```javascript seed.js
+const sampleServices = [
+  {
+    imagen: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop',
+    titulo: 'Netflix Premium',
+    precio: 5.99,
+    descuento: 20,
+    descripcion: 'Pantalla completa en 4K Ultra HD. Acceso a todo el catálogo sin restricciones. Hasta 4 dispositivos simultáneos.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1574375927938-d5a98e8d7e28?w=400&h=300&fit=crop',
+    titulo: 'Disney+ Premium',
+    precio: 4.99,
+    descuento: 15,
+    descripcion: 'Todo el contenido de Disney, Marvel, Star Wars y National Geographic. Calidad 4K HDR con Dolby Atmos.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400&h=300&fit=crop',
+    titulo: 'HBO Max',
+    precio: 5.49,
+    descuento: 10,
+    descripcion: 'Series exclusivas, películas de estreno y documentales. Contenido de Warner Bros, DC y más.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&h=300&fit=crop',
+    titulo: 'Spotify Premium',
+    precio: 3.49,
+    descuento: 0,
+    descripcion: 'Música sin anuncios ni interrupciones. Descarga y escucha offline. Calidad de audio superior.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1615986201152-7686a4867f30?w=400&h=300&fit=crop',
+    titulo: 'IPTV Full HD',
+    precio: 8.99,
+    descuento: 25,
+    descripcion: 'Más de 5000 canales en vivo de todo el mundo. Deportes, películas, series y más. Guía EPG incluida.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1586899028174-e7098604235b?w=400&h=300&fit=crop',
+    titulo: 'Amazon Prime Video',
+    precio: 4.49,
+    descuento: 5,
+    descripcion: 'Catálogo exclusivo de series y películas originales. Incluye canales adicionales y contenido en 4K.',
+  },
+];
+```
+
+### Running the Seed Script
+
+<Steps>
+  <Step title="Ensure MongoDB is Running">
+    Verify that MongoDB is accessible:
+    
+    ```bash
+    # For Docker
+    docker compose ps mongo
+    
+    # For local MongoDB
+    mongosh --eval "db.adminCommand('ping')"
+    ```
+  </Step>
+
+  <Step title="Set the MongoDB URI">
+    Ensure your `.env` file has the correct `MONGODB_URI`:
+    
+    ```bash
+    MONGODB_URI=mongodb://localhost:27017/astro_services
+    ```
+  </Step>
+
+  <Step title="Run the Seed Command">
+    Execute the seed script:
+    
+    **Local Development:**
+    ```bash
+    cd astro_backend
+    npm run seed
+    ```
+    
+    **Docker Compose:**
+    ```bash
+    docker compose exec backend npm run seed
+    ```
+  </Step>
+
+  <Step title="Verify Data Insertion">
+    The script will output:
+    
+    ```
+    MongoDB conectado para seeding...
+    Colección de servicios limpiada.
+    6 servicios insertados correctamente.
+    Conexión cerrada. Seed completado.
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+The seed script deletes all existing data in the `services` collection before inserting new records. Run with caution in production environments.
+</Warning>
+
+### Seed Script Behavior
+
+The seed script performs the following operations:
+
+1. **Connects to MongoDB** using `process.env.MONGODB_URI`
+2. **Deletes existing data** with `Service.deleteMany({})`
+3. **Inserts sample services** using `Service.insertMany(sampleServices)`
+4. **Closes the connection** and exits
+
+```javascript seed.js (excerpt)
+const seedDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('MongoDB conectado para seeding...');
+
+    await Service.deleteMany({});
+    console.log('Colección de servicios limpiada.');
+
+    const created = await Service.insertMany(sampleServices);
+    console.log(`${created.length} servicios insertados correctamente.`);
+
+    await mongoose.connection.close();
+    console.log('Conexión cerrada. Seed completado.');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error durante el seed:', error.message);
+    process.exit(1);
+  }
+};
+```
+
+## Database Schema
+
+The Service model defines the structure of service documents in MongoDB:
+
+```javascript models/Service.js (typical structure)
+{
+  imagen: String,      // URL to service thumbnail image
+  titulo: String,      // Service name (e.g., "Netflix Premium")
+  precio: Number,      // Base price in currency units
+  descuento: Number,   // Discount percentage (0-100)
+  descripcion: String  // Detailed service description
+}
+```
+
+## Verifying Database Connection
+
+### From Application Logs
+
+When the backend starts successfully, you'll see:
+
+```
+MongoDB conectado: localhost
+Servidor corriendo en http://localhost:5000
+```
+
+### Using MongoDB Shell
+
+**Connect to local MongoDB:**
+```bash
+mongosh astro_services
+```
+
+**Connect to Docker MongoDB:**
+```bash
+docker compose exec mongo mongosh astro_services
+```
+
+**List all services:**
+```javascript
+db.services.find().pretty()
+```
+
+**Count services:**
+```javascript
+db.services.countDocuments()
+```
+
+### Using the Health Check Endpoint
+
+Verify the backend is running and can connect to MongoDB:
+
+```bash
+curl http://localhost:5000/api/health
+```
+
+**Expected response:**
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-03-13T10:30:00.000Z"
+}
+```
+
+## MongoDB Atlas Setup
+
+For production deployments, MongoDB Atlas provides a managed cloud database.
+
+<Steps>
+  <Step title="Create Atlas Account">
+    Sign up at [mongodb.com/atlas](https://www.mongodb.com/cloud/atlas)
+  </Step>
+
+  <Step title="Create Cluster">
+    - Choose a cloud provider (AWS, Google Cloud, or Azure)
+    - Select a region close to your application
+    - Choose the free M0 tier for development
+  </Step>
+
+  <Step title="Configure Network Access">
+    Add your IP address to the IP Access List:
+    
+    - Click "Network Access" in the left sidebar
+    - Click "Add IP Address"
+    - For development: use `0.0.0.0/0` (allow all)
+    - For production: specify your server's IP
+  </Step>
+
+  <Step title="Create Database User">
+    - Click "Database Access" in the left sidebar
+    - Click "Add New Database User"
+    - Choose "Password" authentication
+    - Set username and password
+    - Grant "Read and write to any database" role
+  </Step>
+
+  <Step title="Get Connection String">
+    - Click "Connect" on your cluster
+    - Choose "Connect your application"
+    - Copy the connection string
+    - Replace `<password>` with your user password
+    - Replace `<dbname>` with `astro_services`
+  </Step>
+
+  <Step title="Update Configuration">
+    Add the connection string to your `.env` file:
+    
+    ```bash
+    MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/astro_services?retryWrites=true&w=majority
+    ```
+  </Step>
+</Steps>
+
+<Note>
+MongoDB Atlas connections use `mongodb+srv://` protocol, which requires DNS SRV record resolution. The application's DNS configuration (using Google DNS) ensures this works reliably.
+</Note>
+
+## Troubleshooting
+
+### Connection Timeout
+
+**Symptom:** `MongoNetworkError: connection timed out`
+
+**Solutions:**
+1. Check MongoDB is running: `docker compose ps mongo` or `sudo systemctl status mongod`
+2. Verify the port is accessible: `nc -zv localhost 27017`
+3. For Atlas: Check IP whitelist in Network Access settings
+4. Ensure firewall allows connections on port 27017
+
+### Authentication Failed
+
+**Symptom:** `MongoServerError: Authentication failed`
+
+**Solutions:**
+1. Verify username and password in connection string
+2. Check the authentication database: `?authSource=admin`
+3. For Atlas: Ensure the database user has correct permissions
+4. Reset the password in Atlas or local MongoDB
+
+### Database Connection Refused
+
+**Symptom:** `Error: connect ECONNREFUSED 127.0.0.1:27017`
+
+**Solutions:**
+1. MongoDB is not running - start it with `docker compose up -d mongo`
+2. Wrong hostname in Docker - use `mongo` not `localhost`
+3. Wrong port - default is 27017
+4. Check `MONGODB_URI` environment variable is set correctly
+
+### Seed Script Fails
+
+**Symptom:** Seed script exits with errors
+
+**Solutions:**
+1. Ensure MongoDB is running before seeding
+2. Check the `MONGODB_URI` is correct in `.env`
+3. Verify the Service model is properly defined
+4. Check MongoDB has sufficient disk space
+5. Review error messages for specific issues
+
+### DNS Resolution Issues (Atlas)
+
+**Symptom:** `Error: querySrv ENOTFOUND _mongodb._tcp.cluster.mongodb.net`
+
+**Solutions:**
+1. The DNS override should fix this - ensure it's in place
+2. Check network allows DNS queries to 8.8.8.8
+3. Try using standard connection string instead of SRV
+4. Verify the cluster hostname is correct
+
+## Backup and Restore
+
+### Backup with mongodump
+
+**Local MongoDB:**
+```bash
+mongodump --db=astro_services --out=/backup/$(date +%Y%m%d)
+```
+
+**Docker MongoDB:**
+```bash
+docker compose exec mongo mongodump --db=astro_services --out=/data/backup
+```
+
+### Restore with mongorestore
+
+**Local MongoDB:**
+```bash
+mongorestore --db=astro_services /backup/20260313/astro_services
+```
+
+**Docker MongoDB:**
+```bash
+docker compose exec mongo mongorestore --db=astro_services /data/backup/astro_services
+```
+
+<Tip>
+For MongoDB Atlas, use the built-in backup features available in the Atlas dashboard. Atlas provides automated backups and point-in-time recovery.
+</Tip>
+
+## Database Indexes
+
+For production deployments, consider adding indexes to improve query performance:
+
+```javascript
+// Connect to MongoDB
+mongosh astro_services
+
+// Create index on titulo for faster searches
+db.services.createIndex({ titulo: 1 });
+
+// Create index on precio for sorting
+db.services.createIndex({ precio: 1 });
+
+// Create compound index
+db.services.createIndex({ precio: 1, descuento: -1 });
+
+// View all indexes
+db.services.getIndexes();
+```
+
+## Next Steps
+
+- Configure environment variables in [Configuration](/deployment/configuration)
+- Deploy the full stack with [Docker Deployment](/deployment/docker)
+- Learn about the API endpoints in [API Reference](/api/services)

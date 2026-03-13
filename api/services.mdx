@@ -1,0 +1,398 @@
+---
+title: 'Services API'
+description: 'CRUD operations for managing streaming and IPTV services'
+---
+
+## Endpoints Overview
+
+The Services API provides full CRUD (Create, Read, Update, Delete) functionality for managing streaming and IPTV service offerings.
+
+---
+
+## List All Services
+
+<CodeGroup>
+```bash cURL
+curl http://localhost:5000/api/services
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:5000/api/services');
+const services = await response.json();
+```
+</CodeGroup>
+
+Retrieves all services from the database, sorted by creation date (newest first).
+
+### Response
+
+Returns an array of service objects:
+
+<Expandable title="200 OK">
+<ResponseField name="[]" type="array">
+  Array of service objects
+  
+  <Expandable title="Service Object">
+    <ResponseField name="_id" type="string" required>
+      MongoDB ObjectId of the service
+    </ResponseField>
+    
+    <ResponseField name="imagen" type="string" required>
+      URL of the service image
+    </ResponseField>
+    
+    <ResponseField name="titulo" type="string" required>
+      Service title or plan name (max 120 characters)
+    </ResponseField>
+    
+    <ResponseField name="precio" type="number" required>
+      Service price (minimum 0)
+    </ResponseField>
+    
+    <ResponseField name="descuento" type="number">
+      Discount percentage (0-100, default: 0)
+    </ResponseField>
+    
+    <ResponseField name="descripcion" type="string" required>
+      Service description with benefits (max 500 characters)
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of creation
+    </ResponseField>
+    
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 timestamp of last update
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+</Expandable>
+
+<Accordion title="Example Response">
+```json
+[
+  {
+    "_id": "507f1f77bcf86cd799439011",
+    "imagen": "https://ejemplo.com/netflix.jpg",
+    "titulo": "Netflix Premium",
+    "precio": 15.99,
+    "descuento": 0,
+    "descripcion": "4K streaming, 4 pantallas simultáneas, catálogo completo",
+    "createdAt": "2026-03-13T10:00:00.000Z",
+    "updatedAt": "2026-03-13T10:00:00.000Z"
+  },
+  {
+    "_id": "507f1f77bcf86cd799439012",
+    "imagen": "https://ejemplo.com/iptv.jpg",
+    "titulo": "IPTV Premium",
+    "precio": 29.99,
+    "descuento": 20,
+    "descripcion": "Acceso a más de 1000 canales internacionales en HD",
+    "createdAt": "2026-03-12T15:30:00.000Z",
+    "updatedAt": "2026-03-12T15:30:00.000Z"
+  }
+]
+```
+</Accordion>
+
+---
+
+## Get Service by ID
+
+<CodeGroup>
+```bash cURL
+curl http://localhost:5000/api/services/507f1f77bcf86cd799439011
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:5000/api/services/507f1f77bcf86cd799439011');
+const service = await response.json();
+```
+</CodeGroup>
+
+Retrieves a single service by its MongoDB ObjectId.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  MongoDB ObjectId of the service (24-character hexadecimal string)
+</ParamField>
+
+### Response
+
+<Expandable title="200 OK">
+Returns a single service object with all fields.
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://ejemplo.com/netflix.jpg",
+  "titulo": "Netflix Premium",
+  "precio": 15.99,
+  "descuento": 0,
+  "descripcion": "4K streaming, 4 pantallas simultáneas, catálogo completo",
+  "createdAt": "2026-03-13T10:00:00.000Z",
+  "updatedAt": "2026-03-13T10:00:00.000Z"
+}
+```
+</Expandable>
+
+<Expandable title="404 Not Found">
+```json
+{
+  "message": "Servicio no encontrado"
+}
+```
+</Expandable>
+
+<Expandable title="500 Internal Server Error">
+```json
+{
+  "message": "Error al obtener el servicio",
+  "error": "Cast to ObjectId failed for value \"invalid\" at path \"_id\""
+}
+```
+</Expandable>
+
+---
+
+## Create Service
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:5000/api/services \
+  -H "Content-Type: application/json" \
+  -d '{
+    "imagen": "https://ejemplo.com/imagen.jpg",
+    "titulo": "Nuevo Servicio",
+    "precio": 4.99,
+    "descuento": 10,
+    "descripcion": "Descripción del nuevo servicio."
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:5000/api/services', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    imagen: 'https://ejemplo.com/imagen.jpg',
+    titulo: 'Nuevo Servicio',
+    precio: 4.99,
+    descuento: 10,
+    descripcion: 'Descripción del nuevo servicio.'
+  })
+});
+const service = await response.json();
+```
+</CodeGroup>
+
+Creates a new service in the database.
+
+### Request Body
+
+<ParamField body="imagen" type="string" required>
+  URL of the service image. Must be a valid string.
+</ParamField>
+
+<ParamField body="titulo" type="string" required>
+  Service title or plan name. Maximum 120 characters.
+</ParamField>
+
+<ParamField body="precio" type="number" required>
+  Service price. Must be 0 or greater.
+</ParamField>
+
+<ParamField body="descuento" type="number" default="0">
+  Discount percentage. Must be between 0 and 100.
+</ParamField>
+
+<ParamField body="descripcion" type="string" required>
+  Service description with benefits. Maximum 500 characters.
+</ParamField>
+
+### Response
+
+<Expandable title="201 Created">
+Returns the newly created service object including auto-generated fields.
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439013",
+  "imagen": "https://ejemplo.com/imagen.jpg",
+  "titulo": "Nuevo Servicio",
+  "precio": 4.99,
+  "descuento": 10,
+  "descripcion": "Descripción del nuevo servicio.",
+  "createdAt": "2026-03-13T15:45:30.123Z",
+  "updatedAt": "2026-03-13T15:45:30.123Z"
+}
+```
+</Expandable>
+
+<Expandable title="400 Bad Request">
+Returned when validation fails.
+
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: precio: El precio es obligatorio"
+}
+```
+
+Common validation errors:
+- Missing required fields (`imagen`, `titulo`, `precio`, `descripcion`)
+- `titulo` exceeds 120 characters
+- `descripcion` exceeds 500 characters
+- `precio` is negative
+- `descuento` is negative or exceeds 100
+</Expandable>
+
+---
+
+## Update Service
+
+<CodeGroup>
+```bash cURL
+curl -X PUT http://localhost:5000/api/services/507f1f77bcf86cd799439011 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "precio": 12.99,
+    "descuento": 15
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:5000/api/services/507f1f77bcf86cd799439011', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    precio: 12.99,
+    descuento: 15
+  })
+});
+const service = await response.json();
+```
+</CodeGroup>
+
+Updates an existing service. You can update any combination of fields.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  MongoDB ObjectId of the service to update
+</ParamField>
+
+### Request Body
+
+Include only the fields you want to update. All fields are optional, but must pass validation if provided:
+
+<ParamField body="imagen" type="string">
+  URL of the service image
+</ParamField>
+
+<ParamField body="titulo" type="string">
+  Service title (max 120 characters)
+</ParamField>
+
+<ParamField body="precio" type="number">
+  Service price (minimum 0)
+</ParamField>
+
+<ParamField body="descuento" type="number">
+  Discount percentage (0-100)
+</ParamField>
+
+<ParamField body="descripcion" type="string">
+  Service description (max 500 characters)
+</ParamField>
+
+### Response
+
+<Expandable title="200 OK">
+Returns the updated service object.
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://ejemplo.com/netflix.jpg",
+  "titulo": "Netflix Premium",
+  "precio": 12.99,
+  "descuento": 15,
+  "descripcion": "4K streaming, 4 pantallas simultáneas, catálogo completo",
+  "createdAt": "2026-03-13T10:00:00.000Z",
+  "updatedAt": "2026-03-13T15:50:00.000Z"
+}
+```
+</Expandable>
+
+<Expandable title="400 Bad Request">
+```json
+{
+  "message": "Error al actualizar el servicio",
+  "error": "Validation failed: descuento: El descuento no puede superar el 100%"
+}
+```
+</Expandable>
+
+<Expandable title="404 Not Found">
+```json
+{
+  "message": "Servicio no encontrado"
+}
+```
+</Expandable>
+
+---
+
+## Delete Service
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE http://localhost:5000/api/services/507f1f77bcf86cd799439011
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:5000/api/services/507f1f77bcf86cd799439011', {
+  method: 'DELETE'
+});
+const result = await response.json();
+```
+</CodeGroup>
+
+Permanently deletes a service from the database.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  MongoDB ObjectId of the service to delete
+</ParamField>
+
+### Response
+
+<Expandable title="200 OK">
+Returns a confirmation message.
+
+```json
+{
+  "message": "Servicio eliminado correctamente"
+}
+```
+</Expandable>
+
+<Expandable title="404 Not Found">
+```json
+{
+  "message": "Servicio no encontrado"
+}
+```
+</Expandable>
+
+<Expandable title="500 Internal Server Error">
+```json
+{
+  "message": "Error al eliminar el servicio",
+  "error": "Cast to ObjectId failed for value \"invalid\" at path \"_id\""
+}
+```
+</Expandable>

@@ -1,0 +1,420 @@
+---
+title: Frontend Components
+description: Detailed documentation of all React components in Astro Services
+icon: 'puzzle-piece'
+---
+
+The Astro Services frontend is built with React and organized into reusable components. This guide documents all available components, their props, and usage patterns.
+
+## Component Architecture
+
+The application follows a component-based architecture:
+
+- **Header**: Navigation, branding, and search functionality
+- **Footer**: Copyright and attribution
+- **ServiceCard**: Individual service display with pricing
+- **ServiceGrid**: Grid layout for service cards
+
+## Header Component
+
+The Header component provides navigation, branding, and search functionality with responsive behavior.
+
+### Props
+
+<ParamField path="searchTerm" type="string" required>
+  Current search query value
+</ParamField>
+
+<ParamField path="onSearchChange" type="function" required>
+  Callback function triggered when search input changes. Receives the new search term as a parameter.
+</ParamField>
+
+### Features
+
+- Responsive design with mobile hamburger menu
+- Integrated search bar (desktop and mobile layouts)
+- Smooth menu transitions and animations
+- External link handling with proper security attributes
+
+### Usage Example
+
+```jsx
+import { useState } from 'react';
+import Header from './components/Header';
+
+function App() {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  return (
+    <Header 
+      searchTerm={searchTerm} 
+      onSearchChange={setSearchTerm} 
+    />
+  );
+}
+```
+
+### Implementation Details
+
+```jsx components/Header.jsx
+import { useState } from 'react';
+
+const navLinks = [
+  { label: 'Servicios', href: '#servicios', external: false },
+  { label: 'Contacto', href: 'https://wa.me/51933863899', external: true },
+];
+
+function Header({ searchTerm, onSearchChange }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <header className="border-b border-gray-800 bg-gray-950">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold tracking-tight text-white">
+            Astro <span className="text-indigo-400">Streaming</span>
+          </h1>
+        </div>
+
+        {/* Desktop Search */}
+        <div className="hidden flex-1 max-w-md md:block">
+          <input
+            type="text"
+            placeholder="Buscar servicios..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm text-white"
+          />
+        </div>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden gap-6 text-sm text-gray-400 md:flex">
+          {navLinks.map(({ label, href, external }) => (
+            <a
+              key={label}
+              href={href}
+              {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              className="transition-colors hover:text-white"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </header>
+  );
+}
+```
+
+## Footer Component
+
+Simple footer component displaying copyright information.
+
+### Props
+
+No props required - this is a static component.
+
+### Usage Example
+
+```jsx
+import Footer from './components/Footer';
+
+function App() {
+  return (
+    <div>
+      {/* Main content */}
+      <Footer />
+    </div>
+  );
+}
+```
+
+### Implementation
+
+```jsx components/Footer.jsx
+function Footer() {
+  return (
+    <footer className="border-t border-gray-800 bg-gray-950 py-6 text-center text-sm text-gray-500">
+      <p>{new Date().getFullYear()} Desarrollado por Luis LLatas.</p>
+    </footer>
+  );
+}
+
+export default Footer;
+```
+
+## ServiceCard Component
+
+Displays an individual service with image, title, description, pricing, and discount information.
+
+### Props
+
+<ParamField path="service" type="object" required>
+  Service object containing all service data
+  
+  **Properties:**
+  - `imagen` (string): Service image URL
+  - `titulo` (string): Service title
+  - `precio` (number): Base price
+  - `descuento` (number): Discount percentage (0-100)
+  - `descripcion` (string): Service description
+</ParamField>
+
+<ParamField path="priority" type="boolean" default="false">
+  If true, image uses eager loading for better performance on above-the-fold content
+</ParamField>
+
+### Features
+
+- Automatic price calculation with discount
+- Conditional discount badge rendering
+- Image optimization with lazy/eager loading
+- Hover effects and animations
+- WhatsApp integration for contracting
+
+### Usage Example
+
+```jsx
+import ServiceCard from './components/ServiceCard';
+
+const service = {
+  _id: '123',
+  imagen: 'https://example.com/netflix.jpg',
+  titulo: 'Netflix Premium',
+  precio: 5.99,
+  descuento: 20,
+  descripcion: 'Pantalla completa en 4K Ultra HD.'
+};
+
+function MyComponent() {
+  return <ServiceCard service={service} priority={true} />;
+}
+```
+
+### Price Calculation Logic
+
+```jsx
+const precioFinal = descuento > 0 
+  ? (precio * (1 - descuento / 100)).toFixed(2) 
+  : precio.toFixed(2);
+```
+
+If a service has a 20% discount on S/.5.99, the final price is:
+
+```
+5.99 * (1 - 20/100) = 5.99 * 0.8 = S/.4.79
+```
+
+### Implementation Details
+
+```jsx components/ServiceCard.jsx
+function ServiceCard({ service, priority = false }) {
+  const { imagen, titulo, precio, descuento, descripcion } = service;
+  const precioFinal = descuento > 0 
+    ? (precio * (1 - descuento / 100)).toFixed(2) 
+    : precio.toFixed(2);
+
+  return (
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-gray-900 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-1">
+      {/* Image */}
+      <div className="relative h-48 overflow-hidden">
+        <img
+          src={imagen}
+          alt={titulo}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
+        />
+        {descuento > 0 && (
+          <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white">
+            -{descuento}%
+          </span>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <h3 className="text-lg font-bold text-white">{titulo}</h3>
+        <p className="flex-1 text-sm leading-relaxed text-gray-400">{descripcion}</p>
+
+        {/* Price */}
+        <div className="flex items-end gap-2 pt-2">
+          <span className="text-2xl font-extrabold text-indigo-400">S/.{precioFinal}</span>
+          {descuento > 0 && (
+            <span className="mb-0.5 text-sm text-gray-500 line-through">S/.{precio.toFixed(2)}</span>
+          )}
+          <span className="mb-0.5 text-xs text-gray-500">/mes</span>
+        </div>
+
+        {/* Button */}
+        <a href="https://wa.me/51933863899" target="_blank" rel="noopener noreferrer">
+          <button className="mt-2 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-indigo-500">
+            Contratar
+          </button>
+        </a>
+      </div>
+    </div>
+  );
+}
+```
+
+## ServiceGrid Component
+
+Responsive grid container for displaying multiple service cards.
+
+### Props
+
+<ParamField path="services" type="array" required>
+  Array of service objects to display. Each service is passed to a ServiceCard component.
+</ParamField>
+
+### Features
+
+- Responsive grid layout (1/2/3 columns)
+- Empty state handling
+- Automatic priority assignment (first 3 services)
+- Optimized rendering with keys
+
+### Usage Example
+
+```jsx
+import ServiceGrid from './components/ServiceGrid';
+import useServices from './hooks/useServices';
+
+function App() {
+  const { services, loading, error } = useServices();
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return <ServiceGrid services={services} />;
+}
+```
+
+### Grid Breakpoints
+
+- **Mobile** (`default`): 1 column
+- **Tablet** (`sm:`): 2 columns
+- **Desktop** (`lg:`): 3 columns
+
+### Implementation
+
+```jsx components/ServiceGrid.jsx
+import ServiceCard from './ServiceCard';
+
+function ServiceGrid({ services }) {
+  if (services.length === 0) {
+    return (
+      <p className="text-center text-gray-500">Servicio no encontrado.</p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {services.map((service, index) => (
+        <ServiceCard 
+          key={service._id} 
+          service={service} 
+          priority={index < 3}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default ServiceGrid;
+```
+
+<Accordion title="Why prioritize the first 3 services?">
+  The first three services are visible above the fold on most screens. Setting `priority={true}` tells the browser to load these images with higher priority using `loading="eager"` and `fetchPriority="high"`, improving perceived performance.
+</Accordion>
+
+## Component Integration Example
+
+Here's how all components work together in the main App:
+
+```jsx src/App.jsx
+import { useState, useMemo } from 'react';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import ServiceGrid from './components/ServiceGrid';
+import useServices from './hooks/useServices';
+
+function App() {
+  const { services, loading, error } = useServices();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredServices = useMemo(() => {
+    if (!searchTerm.trim()) return services;
+    return services.filter((service) =>
+      service.titulo.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [services, searchTerm]);
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-950 text-white">
+      <Header searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-12">
+        {loading && <div>Loading...</div>}
+        {error && <div>Error: {error}</div>}
+        {!loading && !error && <ServiceGrid services={filteredServices} />}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+export default App;
+```
+
+## Best Practices
+
+<Tabs>
+  <Tab title="Props Validation">
+    Always validate props in your components:
+
+    ```jsx
+    function ServiceCard({ service, priority = false }) {
+      if (!service) return null;
+      // Component logic
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Image Optimization">
+    Use the priority prop for above-the-fold images:
+
+    ```jsx
+    {services.map((service, index) => (
+      <ServiceCard 
+        service={service} 
+        priority={index < 3} // First 3 are priority
+      />
+    ))}
+    ```
+  </Tab>
+  
+  <Tab title="Accessibility">
+    Include proper ARIA labels and semantic HTML:
+
+    ```jsx
+    <button 
+      aria-label="Abrir menú"
+      onClick={() => setMenuOpen(!menuOpen)}
+    >
+      {/* Button content */}
+    </button>
+    ```
+  </Tab>
+</Tabs>
+
+## Component Testing
+
+All components have comprehensive test coverage. See the [Testing guide](/development/testing) for details on testing components.
+
+```bash
+npm test -- ServiceCard.test.jsx
+```

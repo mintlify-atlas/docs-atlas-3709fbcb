@@ -1,0 +1,319 @@
+---
+title: 'Data Schema'
+description: 'Service model structure, validation rules, and field constraints'
+---
+
+## Service Model
+
+The Service model represents a streaming or IPTV service offering. It is implemented using Mongoose ODM for MongoDB.
+
+**Model Location**: `astro_backend/src/models/Service.js`
+
+---
+
+## Schema Fields
+
+### imagen
+
+<ParamField body="imagen" type="String" required>
+  URL of the service image displayed in the service card.
+  
+  **Validation**:
+  - Required: Yes
+  - Trimmed: Yes (whitespace removed)
+  - Error message: "La URL de la imagen es obligatoria"
+</ParamField>
+
+<Accordion title="Example Values">
+```json
+"imagen": "https://ejemplo.com/netflix-logo.jpg"
+"imagen": "https://cdn.example.com/images/iptv-premium.png"
+```
+</Accordion>
+
+---
+
+### titulo
+
+<ParamField body="titulo" type="String" required>
+  Service title or plan name displayed as the main heading.
+  
+  **Validation**:
+  - Required: Yes
+  - Trimmed: Yes
+  - Max length: 120 characters
+  - Error messages:
+    - "El título del servicio es obligatorio"
+    - "El título no puede exceder 120 caracteres"
+</ParamField>
+
+<Accordion title="Example Values">
+```json
+"titulo": "Netflix Premium 4K"
+"titulo": "IPTV Internacional - Más de 1000 Canales"
+"titulo": "Disney+ Anual"
+```
+</Accordion>
+
+---
+
+### precio
+
+<ParamField body="precio" type="Number" required>
+  Numeric price value for the service. Currency is not stored in the database.
+  
+  **Validation**:
+  - Required: Yes
+  - Min value: 0 (cannot be negative)
+  - Error messages:
+    - "El precio es obligatorio"
+    - "El precio no puede ser negativo"
+</ParamField>
+
+<Accordion title="Example Values">
+```json
+"precio": 15.99
+"precio": 29.99
+"precio": 4.99
+"precio": 0  // Free service
+```
+</Accordion>
+
+---
+
+### descuento
+
+<ParamField body="descuento" type="Number" default="0">
+  Discount percentage applied to the service price.
+  
+  **Validation**:
+  - Required: No (optional field)
+  - Default: 0
+  - Min value: 0
+  - Max value: 100
+  - Error messages:
+    - "El descuento no puede ser negativo"
+    - "El descuento no puede superar el 100%"
+</ParamField>
+
+<Accordion title="Example Values">
+```json
+"descuento": 0    // No discount
+"descuento": 15   // 15% off
+"descuento": 50   // 50% off
+"descuento": 100  // Free (100% off)
+```
+</Accordion>
+
+---
+
+### descripcion
+
+<ParamField body="descripcion" type="String" required>
+  Detailed description of the service, typically listing features and benefits.
+  
+  **Validation**:
+  - Required: Yes
+  - Trimmed: Yes
+  - Max length: 500 characters
+  - Error messages:
+    - "La descripción es obligatoria"
+    - "La descripción no puede exceder 500 caracteres"
+</ParamField>
+
+<Accordion title="Example Values">
+```json
+"descripcion": "Streaming en 4K, hasta 4 pantallas simultáneas, catálogo completo sin anuncios"
+"descripcion": "Acceso a más de 1000 canales internacionales en HD, incluye canales deportivos y de películas"
+"descripcion": "Plan familiar con acceso a todo el contenido Disney, Pixar, Marvel, Star Wars y National Geographic"
+```
+</Accordion>
+
+---
+
+## Timestamps
+
+The schema includes automatic timestamps managed by Mongoose:
+
+<ResponseField name="createdAt" type="Date">
+  Automatically set when the document is created. ISO 8601 format.
+  
+  ```json
+  "createdAt": "2026-03-13T10:00:00.000Z"
+  ```
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Automatically updated whenever the document is modified. ISO 8601 format.
+  
+  ```json
+  "updatedAt": "2026-03-13T15:45:30.123Z"
+  ```
+</ResponseField>
+
+These fields are configured with the `timestamps: true` option in the schema.
+
+---
+
+## Complete Schema Definition
+
+```javascript
+import mongoose from 'mongoose';
+
+const serviceSchema = new mongoose.Schema(
+  {
+    imagen: {
+      type: String,
+      required: [true, 'La URL de la imagen es obligatoria'],
+      trim: true,
+    },
+    titulo: {
+      type: String,
+      required: [true, 'El título del servicio es obligatorio'],
+      trim: true,
+      maxlength: [120, 'El título no puede exceder 120 caracteres'],
+    },
+    precio: {
+      type: Number,
+      required: [true, 'El precio es obligatorio'],
+      min: [0, 'El precio no puede ser negativo'],
+    },
+    descuento: {
+      type: Number,
+      default: 0,
+      min: [0, 'El descuento no puede ser negativo'],
+      max: [100, 'El descuento no puede superar el 100%'],
+    },
+    descripcion: {
+      type: String,
+      required: [true, 'La descripción es obligatoria'],
+      trim: true,
+      maxlength: [500, 'La descripción no puede exceder 500 caracteres'],
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const Service = mongoose.model('Service', serviceSchema);
+
+export default Service;
+```
+
+---
+
+## Field Summary Table
+
+| Field | Type | Required | Default | Constraints |
+|-------|------|----------|---------|-------------|
+| `imagen` | String | Yes | - | Trimmed |
+| `titulo` | String | Yes | - | Max 120 chars, trimmed |
+| `precio` | Number | Yes | - | Min: 0 |
+| `descuento` | Number | No | 0 | Min: 0, Max: 100 |
+| `descripcion` | String | Yes | - | Max 500 chars, trimmed |
+| `createdAt` | Date | Auto | - | ISO 8601 timestamp |
+| `updatedAt` | Date | Auto | - | ISO 8601 timestamp |
+
+---
+
+## Validation Examples
+
+### Valid Service Object
+
+```json
+{
+  "imagen": "https://ejemplo.com/service.jpg",
+  "titulo": "Premium IPTV",
+  "precio": 29.99,
+  "descuento": 15,
+  "descripcion": "Acceso ilimitado a canales HD y 4K de todo el mundo"
+}
+```
+
+### Invalid Examples
+
+<Accordion title="Missing required field">
+```json
+{
+  "imagen": "https://ejemplo.com/service.jpg",
+  "precio": 29.99,
+  "descripcion": "Acceso ilimitado..."
+  // Missing titulo
+}
+```
+
+**Error Response**:
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: titulo: El título del servicio es obligatorio"
+}
+```
+</Accordion>
+
+<Accordion title="Field exceeds max length">
+```json
+{
+  "imagen": "https://ejemplo.com/service.jpg",
+  "titulo": "This is an extremely long title that exceeds the maximum allowed length of 120 characters and will cause a validation error when attempting to save it",
+  "precio": 29.99,
+  "descripcion": "Description here"
+}
+```
+
+**Error Response**:
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: titulo: El título no puede exceder 120 caracteres"
+}
+```
+</Accordion>
+
+<Accordion title="Negative price">
+```json
+{
+  "imagen": "https://ejemplo.com/service.jpg",
+  "titulo": "Premium Service",
+  "precio": -10,
+  "descripcion": "Description here"
+}
+```
+
+**Error Response**:
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: precio: El precio no puede ser negativo"
+}
+```
+</Accordion>
+
+<Accordion title="Invalid discount percentage">
+```json
+{
+  "imagen": "https://ejemplo.com/service.jpg",
+  "titulo": "Premium Service",
+  "precio": 29.99,
+  "descuento": 150,
+  "descripcion": "Description here"
+}
+```
+
+**Error Response**:
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: descuento: El descuento no puede superar el 100%"
+}
+```
+</Accordion>
+
+---
+
+## Database Collection
+
+Services are stored in the MongoDB collection named `services` (automatically pluralized by Mongoose from the model name `Service`).
+
+**Connection**: Configured via `MONGODB_URI` environment variable in `astro_backend/src/config/db.js`

@@ -1,0 +1,368 @@
+---
+title: Custom Hooks
+description: Custom React hooks for state management and API integration
+icon: 'fish-fins'
+---
+
+Astro Services uses custom React hooks to encapsulate business logic and API interactions. This guide covers the `useServices` hook and its implementation.
+
+## useServices Hook
+
+The `useServices` hook manages fetching and state for the services list. It handles loading states, error handling, and data retrieval from the API.
+
+### Return Values
+
+<ParamField path="services" type="array">
+  Array of service objects fetched from the API. Empty array during loading or if an error occurs.
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  True while the API request is in progress, false otherwise.
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if the request fails, null otherwise.
+</ParamField>
+
+### Basic Usage
+
+```jsx
+import useServices from './hooks/useServices';
+
+function MyComponent() {
+  const { services, loading, error } = useServices();
+
+  if (loading) return <div>Loading services...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div>
+      {services.map(service => (
+        <div key={service._id}>{service.titulo}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+## Implementation
+
+The hook uses React's `useState` and `useEffect` to manage asynchronous data fetching:
+
+```js hooks/useServices.js
+import { useState, useEffect } from 'react';
+import { fetchServices } from '../services/api';
+
+/**
+ * Hook personalizado para obtener los servicios.
+ * Maneja los estados de carga, error y datos.
+ */
+const useServices = () => {
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchServices();
+        setServices(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
+
+  return { services, loading, error };
+};
+
+export default useServices;
+```
+
+## State Management Flow
+
+<Steps>
+  <Step title="Initial State">
+    When the component mounts:
+    - `loading` is set to `true`
+    - `services` is an empty array `[]`
+    - `error` is `null`
+  </Step>
+  
+  <Step title="API Request">
+    The `useEffect` hook triggers on mount:
+    - Calls `fetchServices()` from the API module
+    - Keeps `loading` as `true` during the request
+  </Step>
+  
+  <Step title="Success Response">
+    If the API request succeeds:
+    - `services` is populated with the response data
+    - `error` remains `null`
+    - `loading` is set to `false`
+  </Step>
+  
+  <Step title="Error Response">
+    If the API request fails:
+    - `error` is set to the error message
+    - `services` remains an empty array
+    - `loading` is set to `false`
+  </Step>
+</Steps>
+
+## API Integration
+
+The hook integrates with the API service layer, which handles the actual HTTP requests:
+
+```js services/api.js
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+
+/**
+ * Obtiene todos los servicios desde la API.
+ * @returns {Promise<Array>} Lista de servicios.
+ */
+export const fetchServices = async () => {
+  const response = await fetch(`${API_BASE_URL}/services`);
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: No se pudieron obtener los servicios`);
+  }
+  return response.json();
+};
+```
+
+### Environment-Based API URLs
+
+The API URL is determined dynamically:
+
+<Tabs>
+  <Tab title="Development">
+    Points to the local Express backend:
+    
+    ```
+    http://localhost:5000/api
+    ```
+  </Tab>
+  
+  <Tab title="Production">
+    Uses Vercel serverless functions:
+    
+    ```
+    /api
+    ```
+  </Tab>
+  
+  <Tab title="Custom">
+    Override with environment variable:
+    
+    ```bash
+    VITE_API_URL=https://custom-api.com/api
+    ```
+  </Tab>
+</Tabs>
+
+## Usage in App Component
+
+Here's how `useServices` is used in the main application:
+
+```jsx App.jsx
+import { useState, useMemo } from 'react';
+import useServices from './hooks/useServices';
+import ServiceGrid from './components/ServiceGrid';
+
+function App() {
+  const { services, loading, error } = useServices();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Filter services based on search
+  const filteredServices = useMemo(() => {
+    if (!searchTerm.trim()) return services;
+    return services.filter((service) =>
+      service.titulo.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [services, searchTerm]);
+
+  return (
+    <main>
+      {loading && (
+        <div className="flex justify-center py-20">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl border border-red-800 bg-red-950/50 p-6 text-center text-red-400">
+          <p className="font-semibold">Error al cargar los servicios</p>
+          <p className="mt-1 text-sm">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && <ServiceGrid services={filteredServices} />}
+    </main>
+  );
+}
+```
+
+## Advanced Patterns
+
+### Combining with useMemo
+
+The application combines `useServices` with `useMemo` for efficient filtering:
+
+```jsx
+const { services, loading, error } = useServices();
+const [searchTerm, setSearchTerm] = useState('');
+
+const filteredServices = useMemo(() => {
+  if (!searchTerm.trim()) return services;
+  return services.filter((service) =>
+    service.titulo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+}, [services, searchTerm]);
+```
+
+This ensures filtering only runs when `services` or `searchTerm` changes, not on every render.
+
+### Error Handling
+
+The hook catches errors and provides user-friendly messages:
+
+```jsx
+try {
+  const data = await fetchServices();
+  setServices(data);
+  setError(null);
+} catch (err) {
+  setError(err.message); // Displays to user
+}
+```
+
+## Hook Testing
+
+The `useServices` hook has comprehensive test coverage:
+
+```jsx hooks/useServices.test.jsx
+import { describe, it, expect, vi } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import useServices from './useServices';
+
+vi.mock('../services/api', () => ({
+  fetchServices: vi.fn(),
+}));
+
+import { fetchServices } from '../services/api';
+
+const mockServices = [
+  {
+    _id: '1',
+    titulo: 'Netflix Premium',
+    precio: 5.99,
+    descuento: 20,
+    descripcion: 'Streaming en 4K'
+  }
+];
+
+describe('useServices', () => {
+  it('should start with loading state', () => {
+    fetchServices.mockImplementation(() => new Promise(() => {}));
+    
+    const { result } = renderHook(() => useServices());
+    
+    expect(result.current.loading).toBe(true);
+    expect(result.current.services).toEqual([]);
+    expect(result.current.error).toBe(null);
+  });
+
+  it('should fetch services successfully', async () => {
+    fetchServices.mockResolvedValue(mockServices);
+    
+    const { result } = renderHook(() => useServices());
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    
+    expect(result.current.services).toEqual(mockServices);
+    expect(result.current.error).toBe(null);
+  });
+
+  it('should handle fetch error', async () => {
+    const errorMessage = 'Error al obtener los servicios';
+    fetchServices.mockRejectedValue(new Error(errorMessage));
+    
+    const { result } = renderHook(() => useServices());
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    
+    expect(result.current.services).toEqual([]);
+    expect(result.current.error).toBe(errorMessage);
+  });
+});
+```
+
+Run hook tests with:
+
+```bash
+npm test -- useServices.test.jsx
+```
+
+## Best Practices
+
+<Accordion title="Single Responsibility">
+  Each hook should have a single, clear purpose. `useServices` only handles fetching services - filtering is done at the component level with `useMemo`.
+</Accordion>
+
+<Accordion title="Error Messages">
+  Always provide user-friendly error messages. The API throws descriptive errors that the hook passes to components:
+  
+  ```js
+  throw new Error(`Error ${response.status}: No se pudieron obtener los servicios`);
+  ```
+</Accordion>
+
+<Accordion title="Empty Dependencies">
+  The `useEffect` has an empty dependency array `[]` because we only want to fetch services once on mount:
+  
+  ```js
+  useEffect(() => {
+    loadServices();
+  }, []); // Only run on mount
+  ```
+</Accordion>
+
+<Accordion title="TypeScript Support">
+  For TypeScript projects, add proper types:
+  
+  ```typescript
+  interface Service {
+    _id: string;
+    imagen: string;
+    titulo: string;
+    precio: number;
+    descuento: number;
+    descripcion: string;
+  }
+
+  const useServices = (): {
+    services: Service[];
+    loading: boolean;
+    error: string | null;
+  } => {
+    // Implementation
+  };
+  ```
+</Accordion>
+
+## Related Documentation
+
+- [Frontend Components](/development/components) - Learn about the components that use this hook
+- [Testing](/development/testing) - Testing strategies for custom hooks
+- [API Routes](/api/services) - Backend API endpoints

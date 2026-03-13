@@ -1,0 +1,402 @@
+---
+title: "Installation"
+description: "Complete installation guide for Astro Services with prerequisites, dependencies, and configuration"
+---
+
+This guide covers everything you need to install and configure Astro Services on your local development machine.
+
+## Prerequisites
+
+### Required Software
+
+Ensure you have the following installed before proceeding:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    **Version 18 or higher**
+    
+    Download from [nodejs.org](https://nodejs.org/)
+  </Card>
+  <Card title="Git" icon="git">
+    **Latest stable version**
+    
+    Download from [git-scm.com](https://git-scm.com/)
+  </Card>
+  <Card title="MongoDB" icon="database">
+    **MongoDB Atlas account** (recommended)
+    
+    Free tier available at [mongodb.com/atlas](https://www.mongodb.com/atlas)
+  </Card>
+  <Card title="Package Manager" icon="box">
+    **npm** (bundled with Node.js)
+    
+    Or use yarn/pnpm if preferred
+  </Card>
+</CardGroup>
+
+### Verify installations
+
+Check that Node.js and npm are properly installed:
+
+```bash
+node --version
+# Should output v18.0.0 or higher
+
+npm --version
+# Should output 9.0.0 or higher
+```
+
+## Clone the repository
+
+Get the source code from GitHub:
+
+```bash
+git clone https://github.com/luisllatas-dev/proyecto_streaming.git
+cd Proyecto_Astro
+```
+
+The project structure looks like this:
+
+```
+Proyecto_Astro/
+├── astro_services/          # Frontend (React + Vite)
+├── astro_backend/           # Backend (Express + MongoDB)
+└── docker-compose.yml       # Docker orchestration
+```
+
+## Backend installation
+
+### Install dependencies
+
+Navigate to the backend directory and install packages:
+
+<CodeGroup>
+```bash npm
+cd astro_backend
+npm install
+```
+
+```bash yarn
+cd astro_backend
+yarn install
+```
+
+```bash pnpm
+cd astro_backend
+pnpm install
+```
+</CodeGroup>
+
+This installs the following key dependencies:
+
+| Package | Version | Purpose |
+|---------|---------|----------|
+| `express` | ^4.21.2 | Web framework for REST API |
+| `mongoose` | ^8.9.5 | MongoDB ODM |
+| `dotenv` | ^16.4.7 | Environment variable management |
+| `cors` | ^2.8.5 | Cross-origin resource sharing |
+
+### Configure environment variables
+
+Create a `.env` file in the `astro_backend` directory:
+
+```bash
+touch .env
+```
+
+Add the following configuration:
+
+```env
+# Server Configuration
+PORT=5000
+
+# Database Configuration
+MONGDB_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/astroservicesdb
+```
+
+<Note>
+**MongoDB Atlas Setup:**
+1. Create a free account at [mongodb.com/atlas](https://www.mongodb.com/atlas)
+2. Create a new cluster (free M0 tier works perfectly)
+3. Click "Connect" and choose "Connect your application"
+4. Copy the connection string and replace `<usuario>` and `<password>`
+5. Whitelist your IP address (or use `0.0.0.0/0` for development)
+</Note>
+
+#### Local MongoDB alternative
+
+If you prefer running MongoDB locally:
+
+```env
+PORT=5000
+MONGDB_URI=mongodb://localhost:27017/astro_services
+```
+
+<Tip>
+The backend uses Google DNS servers (`8.8.8.8`, `8.8.4.4`) to resolve MongoDB Atlas SRV records, which improves connection reliability (see `astro_backend/src/config/db.js:5`).
+</Tip>
+
+### Available scripts
+
+The backend provides these npm scripts:
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start server with hot reload (uses `node --watch`) |
+| `npm start` | Start server in production mode |
+| `npm run seed` | Populate database with 6 sample services |
+| `npm test` | Run tests with Vitest |
+| `npm run test:coverage` | Run tests with coverage report |
+
+## Frontend installation
+
+### Install dependencies
+
+Navigate to the frontend directory and install packages:
+
+<CodeGroup>
+```bash npm
+cd ../astro_services
+npm install
+```
+
+```bash yarn
+cd ../astro_services
+yarn install
+```
+
+```bash pnpm
+cd ../astro_services
+pnpm install
+```
+</CodeGroup>
+
+This installs:
+
+| Package | Version | Purpose |
+|---------|---------|----------|
+| `react` | ^19.2.0 | UI library |
+| `react-dom` | ^19.2.0 | React DOM renderer |
+| `vite` | ^7.3.1 | Build tool and dev server |
+| `tailwindcss` | ^4.2.1 | Utility-first CSS framework |
+| `@vitejs/plugin-react-swc` | ^4.2.2 | Fast refresh with SWC |
+
+### Configure API endpoint (optional)
+
+By default, the frontend connects to `http://localhost:5000/api` in development. If your backend runs on a different port, create a `.env` file in `astro_services`:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+The API client at `astro_services/src/services/api.js:3` automatically switches between development and production URLs:
+
+```javascript
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+```
+
+### Available scripts
+
+The frontend provides these npm scripts:
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run tests with Vitest |
+| `npm run test:coverage` | Run tests with coverage report |
+
+## Database seeding
+
+Populate your database with sample streaming services:
+
+```bash
+cd astro_backend
+npm run seed
+```
+
+This script (`astro_backend/src/seed.js:53`) will:
+
+1. Connect to your MongoDB database
+2. Clear existing services (if any)
+3. Insert 6 sample services:
+   - Netflix Premium
+   - Disney+ Premium
+   - HBO Max
+   - Spotify Premium
+   - IPTV Full HD
+   - Amazon Prime Video
+
+Each service includes realistic data:
+
+```javascript
+{
+  imagen: 'https://images.unsplash.com/photo-...',
+  titulo: 'Netflix Premium',
+  precio: 5.99,
+  descuento: 20,
+  descripcion: 'Pantalla completa en 4K Ultra HD. Acceso a todo el catálogo...'
+}
+```
+
+## Verify installation
+
+### Test backend
+
+Start the backend server:
+
+```bash
+cd astro_backend
+npm run dev
+```
+
+Expected output:
+
+```
+MongoDB conectado: cluster0-shard-00-01.xxxxx.mongodb.net
+Servidor corriendo en http://localhost:5000
+```
+
+Test the health endpoint:
+
+```bash
+curl http://localhost:5000/api/health
+```
+
+### Test frontend
+
+In a separate terminal, start the frontend:
+
+```bash
+cd astro_services
+npm run dev
+```
+
+Expected output:
+
+```
+  VITE v7.3.1  ready in 324 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+```
+
+Open your browser to `http://localhost:5173` and verify the service cards are displayed.
+
+## Docker installation (alternative)
+
+If you prefer using Docker, you can run the entire stack with Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+This launches three containers:
+
+| Container | Port | Description |
+|-----------|------|-------------|
+| `astro_mongo` | 27017 | MongoDB 7 database |
+| `astro_backend` | 5000 | Express API server |
+| `astro_frontend` | 80 | React application |
+
+Access the application at `http://localhost` (port 80).
+
+<Warning>
+Docker Compose uses a local MongoDB instance at `mongodb://mongo:27017/astro_services`, not MongoDB Atlas. You don't need a `.env` file when using Docker.
+</Warning>
+
+## Troubleshooting
+
+### MongoDB connection issues
+
+**Error: "Error de conexión a MongoDB"**
+
+- Verify your `MONGODB_URI` is correct in `.env`
+- Check MongoDB Atlas IP whitelist includes your IP
+- Ensure your MongoDB Atlas user has read/write permissions
+- Try using Google DNS by adding to your `.env`:
+  ```env
+  NODE_OPTIONS="--dns-result-order=ipv4first"
+  ```
+
+### Port conflicts
+
+**Error: "EADDRINUSE: address already in use"**
+
+If port 5000 is occupied:
+
+```bash
+# Find process using port 5000
+lsof -i :5000
+
+# Kill the process
+kill -9 <PID>
+
+# Or change the port in .env
+PORT=5001
+```
+
+### Module not found errors
+
+**Error: "Cannot find module"**
+
+Ensure you ran `npm install` in both directories:
+
+```bash
+# Reinstall backend
+cd astro_backend
+rm -rf node_modules package-lock.json
+npm install
+
+# Reinstall frontend
+cd ../astro_services
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Frontend can't connect to backend
+
+**Error: "Failed to fetch"**
+
+- Ensure backend is running on port 5000
+- Check CORS is enabled (it's configured in the backend by default)
+- Verify `VITE_API_URL` if you set a custom backend URL
+- Check browser console for specific error messages
+
+### Node version issues
+
+**Error: "Unsupported engine"**
+
+Upgrade Node.js to v18 or higher:
+
+```bash
+# Check current version
+node --version
+
+# Install nvm (Node Version Manager)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Install and use Node 18
+nvm install 18
+nvm use 18
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get the app running in 5 minutes
+  </Card>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Advanced configuration options
+  </Card>
+  <Card title="Development" icon="code" href="/development">
+    Development workflow and best practices
+  </Card>
+  <Card title="Deployment" icon="cloud" href="/deployment">
+    Deploy to production
+  </Card>
+</CardGroup>

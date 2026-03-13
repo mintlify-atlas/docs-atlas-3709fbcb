@@ -1,0 +1,607 @@
+---
+title: Testing
+description: Comprehensive testing guide with Vitest for Astro Services
+icon: 'flask'
+---
+
+Astro Services uses Vitest as its testing framework, providing a fast and modern testing experience for React components, hooks, and API functions.
+
+## Testing Setup
+
+### Vitest Configuration
+
+The project uses Vitest with React Testing Library:
+
+```js vitest.config.js
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react-swc';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      exclude: ['node_modules/', 'src/test/'],
+    },
+  },
+});
+```
+
+#### Configuration Breakdown:
+
+- **globals**: Enables global test functions (`describe`, `it`, `expect`) without imports
+- **environment**: Uses `jsdom` for DOM simulation
+- **setupFiles**: Runs setup code before tests
+- **include**: Matches `*.test.js` and `*.test.jsx` files
+- **coverage**: Generates code coverage reports
+
+### Dependencies
+
+```json package.json
+{
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "jsdom": "^28.1.0",
+    "vitest": "^4.0.18"
+  }
+}
+```
+
+### Test Scripts
+
+```json package.json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  }
+}
+```
+
+<Tabs>
+  <Tab title="Watch Mode">
+    Run tests in watch mode (re-runs on file changes):
+    
+    ```bash
+    npm test
+    ```
+  </Tab>
+  
+  <Tab title="Single Run">
+    Run tests once and exit:
+    
+    ```bash
+    npm run test:run
+    ```
+  </Tab>
+  
+  <Tab title="Coverage">
+    Generate code coverage report:
+    
+    ```bash
+    npm run test:coverage
+    ```
+  </Tab>
+</Tabs>
+
+## Testing Components
+
+### ServiceCard Component Tests
+
+Comprehensive tests for the ServiceCard component:
+
+```jsx components/ServiceCard.test.jsx
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import ServiceCard from './ServiceCard';
+
+const mockService = {
+  _id: '123',
+  imagen: 'https://example.com/image.jpg',
+  titulo: 'Netflix Premium',
+  precio: 5.99,
+  descuento: 20,
+  descripcion: 'Pantalla completa en 4K Ultra HD.',
+};
+
+describe('ServiceCard', () => {
+  it('renders service title correctly', () => {
+    render(<ServiceCard service={mockService} />);
+    expect(screen.getByText('Netflix Premium')).toBeInTheDocument();
+  });
+
+  it('renders discounted price correctly', () => {
+    render(<ServiceCard service={mockService} />);
+    // 5.99 * (1 - 20/100) = 4.79
+    expect(screen.getByText('S/.4.79')).toBeInTheDocument();
+  });
+
+  it('shows discount badge when discount > 0', () => {
+    render(<ServiceCard service={mockService} />);
+    expect(screen.getByText('-20%')).toBeInTheDocument();
+  });
+
+  it('should use eager loading for priority images', () => {
+    render(<ServiceCard service={mockService} priority={true} />);
+    const img = screen.getByAltText('Netflix Premium');
+    expect(img).toHaveAttribute('loading', 'eager');
+    expect(img).toHaveAttribute('fetchpriority', 'high');
+  });
+
+  it('should use lazy loading for non-priority images', () => {
+    render(<ServiceCard service={mockService} priority={false} />);
+    const img = screen.getByAltText('Netflix Premium');
+    expect(img).toHaveAttribute('loading', 'lazy');
+    expect(img).toHaveAttribute('fetchpriority', 'auto');
+  });
+});
+```
+
+#### Testing Patterns:
+
+<Accordion title="Rendering Tests">
+  Verify components render with correct content:
+  
+  ```jsx
+  it('renders service title correctly', () => {
+    render(<ServiceCard service={mockService} />);
+    expect(screen.getByText('Netflix Premium')).toBeInTheDocument();
+  });
+  ```
+</Accordion>
+
+<Accordion title="Conditional Rendering">
+  Test elements that appear conditionally:
+  
+  ```jsx
+  it('shows discount badge when discount > 0', () => {
+    render(<ServiceCard service={mockService} />);
+    expect(screen.getByText('-20%')).toBeInTheDocument();
+  });
+
+  it('does not show discount badge when discount is 0', () => {
+    render(<ServiceCard service={mockServiceNoDiscount} />);
+    expect(screen.queryByText(/-\d+%/)).not.toBeInTheDocument();
+  });
+  ```
+</Accordion>
+
+<Accordion title="Computed Values">
+  Test calculated values like prices:
+  
+  ```jsx
+  it('renders discounted price correctly', () => {
+    render(<ServiceCard service={mockService} />);
+    // Precio con descuento: 5.99 * 0.8 = 4.79
+    expect(screen.getByText('S/.4.79')).toBeInTheDocument();
+  });
+  ```
+</Accordion>
+
+<Accordion title="Attributes">
+  Verify HTML attributes:
+  
+  ```jsx
+  it('renders service image with correct alt text', () => {
+    render(<ServiceCard service={mockService} />);
+    const img = screen.getByAltText('Netflix Premium');
+    expect(img).toHaveAttribute('src', 'https://example.com/image.jpg');
+  });
+  ```
+</Accordion>
+
+### Running Component Tests
+
+```bash
+# Run all component tests
+npm test -- components/
+
+# Run specific component test
+npm test -- ServiceCard.test.jsx
+
+# Watch mode for a specific test
+npm test -- ServiceCard.test.jsx --watch
+```
+
+## Testing Hooks
+
+### useServices Hook Tests
+
+Testing custom hooks requires `renderHook` from React Testing Library:
+
+```jsx hooks/useServices.test.jsx
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import useServices from './useServices';
+
+// Mock the API module
+vi.mock('../services/api', () => ({
+  fetchServices: vi.fn(),
+}));
+
+import { fetchServices } from '../services/api';
+
+const mockServices = [
+  {
+    _id: '1',
+    titulo: 'Netflix Premium',
+    precio: 5.99,
+    descuento: 20,
+    descripcion: 'Descripción Netflix',
+  },
+];
+
+describe('useServices', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('should start with loading state', () => {
+    fetchServices.mockImplementation(() => new Promise(() => {}));
+    
+    const { result } = renderHook(() => useServices());
+    
+    expect(result.current.loading).toBe(true);
+    expect(result.current.services).toEqual([]);
+    expect(result.current.error).toBe(null);
+  });
+
+  it('should fetch services successfully', async () => {
+    fetchServices.mockResolvedValue(mockServices);
+    
+    const { result } = renderHook(() => useServices());
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    
+    expect(result.current.services).toEqual(mockServices);
+    expect(result.current.error).toBe(null);
+  });
+
+  it('should handle fetch error', async () => {
+    const errorMessage = 'Error al obtener los servicios';
+    fetchServices.mockRejectedValue(new Error(errorMessage));
+    
+    const { result } = renderHook(() => useServices());
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    
+    expect(result.current.services).toEqual([]);
+    expect(result.current.error).toBe(errorMessage);
+  });
+});
+```
+
+#### Hook Testing Patterns:
+
+<Steps>
+  <Step title="Mock Dependencies">
+    Mock external dependencies with `vi.mock()`:
+    
+    ```jsx
+    vi.mock('../services/api', () => ({
+      fetchServices: vi.fn(),
+    }));
+    ```
+  </Step>
+  
+  <Step title="Setup and Teardown">
+    Clear mocks between tests:
+    
+    ```jsx
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+    ```
+  </Step>
+  
+  <Step title="Test Initial State">
+    Verify the hook's initial state:
+    
+    ```jsx
+    const { result } = renderHook(() => useServices());
+    expect(result.current.loading).toBe(true);
+    ```
+  </Step>
+  
+  <Step title="Wait for Async Updates">
+    Use `waitFor` for asynchronous operations:
+    
+    ```jsx
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    ```
+  </Step>
+</Steps>
+
+## Testing API Functions
+
+### API Service Tests
+
+Test API functions by mocking the global `fetch`:
+
+```js services/api.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchServices, fetchServiceById } from './api';
+
+// Mock global fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+const mockServices = [
+  { _id: '1', titulo: 'Netflix', precio: 5.99 },
+  { _id: '2', titulo: 'Disney+', precio: 4.99 },
+];
+
+describe('API Service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('fetchServices', () => {
+    it('should fetch all services successfully', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockServices),
+      });
+
+      const result = await fetchServices();
+
+      expect(result).toEqual(mockServices);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/services'));
+    });
+
+    it('should throw error when response is not ok', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+      });
+
+      await expect(fetchServices()).rejects.toThrow('Error 500');
+    });
+  });
+
+  describe('fetchServiceById', () => {
+    it('should fetch a single service by ID', async () => {
+      const mockService = mockServices[0];
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockService),
+      });
+
+      const result = await fetchServiceById('1');
+
+      expect(result).toEqual(mockService);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/services/1'));
+    });
+  });
+});
+```
+
+## Testing Backend Models
+
+### Mongoose Model Validation Tests
+
+```js models/Service.test.js
+import { describe, it, expect } from 'vitest';
+import Service from './Service.js';
+
+describe('Service Model - Schema Validation', () => {
+  it('should fail validation without required fields', async () => {
+    const service = new Service({});
+
+    let error;
+    try {
+      await service.validate();
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeDefined();
+    expect(error.errors.imagen).toBeDefined();
+    expect(error.errors.titulo).toBeDefined();
+    expect(error.errors.precio).toBeDefined();
+  });
+
+  it('should pass validation with all required fields', async () => {
+    const service = new Service({
+      imagen: 'https://example.com/image.jpg',
+      titulo: 'Netflix Premium',
+      precio: 5.99,
+      descripcion: 'Servicio de streaming en 4K.',
+    });
+
+    let error;
+    try {
+      await service.validate();
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeUndefined();
+  });
+
+  it('should reject negative precio', async () => {
+    const service = new Service({
+      imagen: 'https://example.com/image.jpg',
+      titulo: 'Test',
+      precio: -5,
+      descripcion: 'Test description',
+    });
+
+    let error;
+    try {
+      await service.validate();
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeDefined();
+    expect(error.errors.precio).toBeDefined();
+  });
+});
+```
+
+## Code Coverage
+
+### Generating Coverage Reports
+
+Run tests with coverage:
+
+```bash
+npm run test:coverage
+```
+
+This generates:
+- Terminal summary (text reporter)
+- HTML report in `coverage/` directory
+
+### Coverage Configuration
+
+```js vitest.config.js
+coverage: {
+  provider: 'v8',
+  reporter: ['text', 'html'],
+  exclude: ['node_modules/', 'src/test/'],
+}
+```
+
+### Viewing Coverage Report
+
+```bash
+# Generate coverage
+npm run test:coverage
+
+# Open HTML report
+open coverage/index.html
+```
+
+## Best Practices
+
+<Tabs>
+  <Tab title="Arrange-Act-Assert">
+    Follow the AAA pattern:
+    
+    ```jsx
+    it('calculates discounted price', () => {
+      // Arrange
+      const service = { precio: 10, descuento: 20 };
+      
+      // Act
+      render(<ServiceCard service={service} />);
+      
+      // Assert
+      expect(screen.getByText('S/.8.00')).toBeInTheDocument();
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Test Behavior">
+    Test what users see, not implementation:
+    
+    ```jsx
+    // ✅ Good - Tests user-visible behavior
+    expect(screen.getByText('Netflix Premium')).toBeInTheDocument();
+    
+    // ❌ Bad - Tests implementation details
+    expect(component.state.title).toBe('Netflix Premium');
+    ```
+  </Tab>
+  
+  <Tab title="Mock External Dependencies">
+    Always mock API calls and external services:
+    
+    ```jsx
+    vi.mock('../services/api', () => ({
+      fetchServices: vi.fn(),
+    }));
+    ```
+  </Tab>
+  
+  <Tab title="Clean Up">
+    Use `beforeEach` and `afterEach` for cleanup:
+    
+    ```jsx
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.resetAllMocks();
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Common Testing Utilities
+
+### Query Methods
+
+```jsx
+// getBy* - Throws error if not found (use for elements that should exist)
+screen.getByText('Netflix Premium')
+screen.getByRole('button', { name: /contratar/i })
+screen.getByAltText('Netflix Premium')
+
+// queryBy* - Returns null if not found (use for elements that shouldn't exist)
+screen.queryByText('Not Found') // null
+
+// findBy* - Async, waits for element (use for async elements)
+await screen.findByText('Loaded')
+```
+
+### Assertions
+
+```jsx
+expect(element).toBeInTheDocument()
+expect(element).toHaveAttribute('src', 'image.jpg')
+expect(element).toHaveClass('bg-indigo-500')
+expect(mockFn).toHaveBeenCalledTimes(1)
+expect(mockFn).toHaveBeenCalledWith('argument')
+```
+
+## Running Tests in CI/CD
+
+For continuous integration, use the run-once command:
+
+```yaml .github/workflows/test.yml
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run test:run
+      - run: npm run test:coverage
+```
+
+## Related Documentation
+
+- [Frontend Components](/development/components) - Components to test
+- [Custom Hooks](/development/hooks) - Hook testing examples
+- [Vitest Documentation](https://vitest.dev/)
+- [React Testing Library](https://testing-library.com/react)
