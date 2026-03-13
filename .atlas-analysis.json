@@ -1,0 +1,91 @@
+{
+  "projectType": "saas",
+  "projectName": "Astro Services",
+  "projectDescription": "Full-stack streaming and IPTV service marketplace with React frontend and Express API backend",
+  "theme": "palm",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/docker",
+              "deployment/configuration",
+              "deployment/database"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/frontend",
+              "architecture/backend"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "REST API",
+            "pages": [
+              "api/overview",
+              "api/services",
+              "api/schema"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Frontend",
+            "pages": [
+              "development/components",
+              "development/hooks",
+              "development/styling"
+            ]
+          },
+          {
+            "group": "Testing",
+            "pages": [
+              "development/testing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Service catalog with pricing and discounts",
+    "RESTful API with CRUD operations",
+    "Real-time search functionality",
+    "Docker containerization",
+    "MongoDB data persistence",
+    "React 19 with Tailwind CSS",
+    "Health monitoring endpoints"
+  ],
+  "publicApiSurface": [
+    "GET /api/services",
+    "GET /api/services/:id",
+    "POST /api/services",
+    "PUT /api/services/:id",
+    "DELETE /api/services/:id",
+    "GET /api/health"
+  ]
+}
